@@ -1,48 +1,37 @@
-# 1. Import necessary libraries
-import pandas as pd
-import matplotlib.pyplot as plt
-import warnings
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn import tree
+from fastapi import FastAPI
+from pydantic import BaseModel
+import numpy as np
+import onnxruntime as ort
 
-warnings.filterwarnings('ignore')
+# Load ONNX model
+onnx_model_path = "decision_tree.onnx"
+ort_session = ort.InferenceSession(onnx_model_path)
 
-# 2. Loading the dataset
-df = pd.read_csv('dataset.csv')
+# FastAPI app
+app = FastAPI()
 
-# 2.1 Feature Engineering: Add new features to enrich the dataset
-df['BalancePerProduct'] = df['Balance'] / (df['NumOfProducts'] + 1)  # avoid division by zero
+# Input schema
+class InputData(BaseModel):
+    Age: float
+    NumOfProducts: float
+    Balance: float
 
-# Features and target
-x = df[['Age','NumOfProducts','Balance','BalancePerProduct']]
-y = df[['Exited']]
+@app.post("/predict")
+def predict(data: InputData):
+    BalancePerProduct = data.Balance / (data.NumOfProducts + 1)
+    # Prepare input for ONNX
+    input_array = np.array([[data.Age, data.NumOfProducts, data.Balance, BalancePerProduct]], dtype=np.float32)
+    
+    # Run inference
+    output = ort_session.run(None, {"input": input_array})
+    print(output)
+    predicted_class = int(output[0][0])  # 0 or 1
+    class_probabilities = output[1][0]   # dict-like probs for class 0 and 1
 
-# 3. Train-Test Split
-# 70% of the data is used for training and 30% for testing
-X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
+    churn_label = "Customer will churn" if predicted_class == 1 else "Customer will not churn"
+    churn_probability = class_probabilities[1]  # probability of churn
 
-
-# 4. Training the Decision Tree model
-clf = DecisionTreeClassifier(max_depth=5, random_state=42)
-clf.fit(X_train, y_train)
-
-# Determine Important features
-# importances = clf.feature_importances_
-
-# for feature, importance in zip(x.columns, importances):
-#     print(f"{feature}: {importance:.4f}")
-
-# 5. Prediction & Evaluation
-# Accuracy is the proportion of correct predictions among the total number of cases processed
-y_pred = clf.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
-print(f'Model Accuracy: {accuracy}')
-print("\nClassification Report:\n", classification_report(y_test, y_pred))
-
-# 6. Visualizing the decision tree
-plt.figure(figsize=(12,8))
-tree.plot_tree(clf, filled=True, feature_names=['Age', 'NumOfProducts', 'Balance','BalancePerProduct'], class_names=['No Churn', 'Churn'])
-plt.title('Decision Tree for Predicting Customer Churn')
-plt.show()
+    return {
+        "prediction": churn_label,
+        "churn_probability": f"{churn_probability * 100:.2f}%"  # formatted nicely
+    } 
