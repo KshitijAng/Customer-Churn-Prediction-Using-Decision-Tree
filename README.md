@@ -43,7 +43,6 @@ The dataset comprises customer information, including:
   - Number of Products
   - Balance
   - Balance per Product (engineered feature)
-  - Age Bin (categorized age groups)
 
 - **Target (y)**:
   - Exited (1 if the customer churned, 0 otherwise)
@@ -75,6 +74,32 @@ The dataset comprises customer information, including:
    - Display the structure of the trained Decision Tree.
    - Plot feature importances.
 
+
+
+## 🔁 Model Export: ONNX Format
+
+To enable **fast, cross-platform inference**, the trained Decision Tree model is converted into **ONNX (Open Neural Network Exchange)** format using `skl2onnx`.
+
+**Benefits of ONNX**:
+- Portable model format
+- Optimized for speed
+- Supported across Python, C++, JavaScript, mobile and edge devices
+
+ONNX model inference is handled using the `onnxruntime` library.
+
+
+## 🚀 Deployment with FastAPI
+
+The project includes a **FastAPI-based REST API** to serve predictions from the ONNX model.
+
+### Features:
+- Accepts input JSON with `Age`, `NumOfProducts`, and `Balance`
+- Internally computes derived features like `BalancePerProduct`
+- Returns a user-friendly churn prediction and churn probability
+- Optimized inference using ONNX Runtime
+- Fully documented via **Swagger UI**
+
+
 ## 📈 Results
 
 - **Model Accuracy**: Improved model accuracy from 70% to 84% on the test set through iterative feature engineering and tuning.
@@ -82,4 +107,4 @@ The dataset comprises customer information, including:
   - Engineered `BalancePerProduct` feature which contributed to improved model performance.
   - The Decision Tree visualization provides interpretability into how decisions are made.
 
---
+
