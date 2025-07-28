@@ -3,3 +3,8 @@ numpy
 pandas
 scikit-learn
 scipy
+skl2onnx 
+onnxruntime
+jupyter
+fastapi 
+uvicorn[standard]
